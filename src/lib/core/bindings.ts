@@ -5,6 +5,7 @@ import * as __TAURI_EVENT from "@tauri-apps/api/event";
 
 /** Commands */
 export const commands = {
+	updaterDownloadFallback: (rid: number) => typedError<number | null, string>(__TAURI_INVOKE("updater_download_fallback", { rid })),
 	settingsGet: () => __TAURI_INVOKE<ApiResult<SettingsGetResult_Serialize>>("settings_get"),
 	/**
 	 *  Persist the full settings snapshot and broadcast `settings:changed`.

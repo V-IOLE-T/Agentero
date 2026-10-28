@@ -67,6 +67,7 @@
 - 发现新版后标题栏右上角常驻「新版本」标签按钮（绿色胶囊 tag，`src/components/shell/update-indicator.tsx`），点击直接下载安装并重启；下载/安装中显示 spinner 与进度文案，安装完成前不消失。
 - 安装前会重新拉取一次远端 manifest（`refreshStaleUpdate`）：应用长期驻留导致缓存的 Update 落后于最新 Release 时，直接改装最新版；re-check 失败（离线等）则回退安装缓存清单，不会因此中断（#481）。
 - 更新包由 Tauri Updater 使用内置公钥验证签名，并根据当前系统/架构从 GitHub Release 的 `latest.json` 选择产物。
+- 下载默认走清单的 API `url`；失败后使用同一条目的 `fallback_url` 文件直链重试一次，下载进度归零，仍由官方 Updater 校验原签名。回退沿用相同版本、平台、代理和安装上下文；安装失败不触发重新下载。旧清单缺少 `fallback_url` 时保持原有错误处理，0.13.0 等旧客户端需手动升级后才支持自动回退。发布清单生成方式见 [发布流程](../test/release.md)。
 - 更新检查与下载复用通用页的「网络代理」设置（`src/lib/update/service.ts` 在每次检查时读取，下载沿用检查时的代理）：Updater 插件自带 HTTP 客户端，不走 Host `core::http::client_builder`，因此必须显式传入。该客户端只支持 HTTP(S) 代理，SOCKS 代理需另配 HTTP 端口。
 - 下载前做一次代理检测（`src/lib/settings/proxy-guard.ts`）：应用代理与系统代理都未配置时弹 Toast 提醒（带「打开网络设置」跳转「通用 → 网络代理」），非阻塞、仍继续下载；About 页「安装并重启」与 CLI 安装、标题栏「新版本」标签、启动更新 Toast 四个下载入口都经过该检测。
 - 浏览器预览、`pnpm tauri dev`、移动端不检查更新；设置页会说明该限制。

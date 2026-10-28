@@ -1,5 +1,7 @@
-import type { Update } from "@tauri-apps/plugin-updater";
+import { type DownloadEvent, Update } from "@tauri-apps/plugin-updater";
+import { commands } from "@/lib/core/bindings";
 import { errorText } from "@/lib/core/error";
+import { callResult } from "@/lib/core/ipc";
 import { logger } from "@/lib/core/logger";
 import { isTauri } from "@/lib/core/tauri";
 import { ensureSettingsLoaded } from "@/lib/settings/store";
@@ -175,7 +177,7 @@ export async function installAvailableUpdate(): Promise<UpdateSnapshot> {
 		});
 		// The cached manifest can be days old when the app stayed open across
 		// releases (#481); re-check so users always install the latest version.
-		const update = await refreshStaleUpdate(cached);
+		let update = await refreshStaleUpdate(cached);
 		logger.info("op start updater_install", { version: update.version });
 		let downloadedBytes = 0;
 		let totalBytes: number | undefined;
@@ -189,8 +191,9 @@ export async function installAvailableUpdate(): Promise<UpdateSnapshot> {
 			});
 		}
 		try {
-			await update.download((event) => {
+			const onDownload = (event: DownloadEvent) => {
 				if (event.event === "Started") {
+					downloadedBytes = 0;
 					totalBytes = event.data.contentLength;
 				} else if (event.event === "Progress") {
 					downloadedBytes += event.data.chunkLength;
@@ -203,7 +206,39 @@ export async function installAvailableUpdate(): Promise<UpdateSnapshot> {
 					downloadedBytes,
 					totalBytes,
 				});
-			});
+			};
+			try {
+				await update.download(onDownload);
+			} catch (error) {
+				const rid = await callResult(() =>
+					commands.updaterDownloadFallback(update.rid),
+				);
+				if (rid === null) throw error;
+				logger.warn("updater_download fallback=direct", {
+					error: errorText(error),
+				});
+				const previous = update;
+				update = new Update({
+					rid,
+					currentVersion: previous.currentVersion,
+					version: previous.version,
+					date: previous.date,
+					body: previous.body,
+					rawJson: previous.rawJson,
+				});
+				availableUpdate = update;
+				await closeUpdate(previous);
+				downloadedBytes = 0;
+				totalBytes = undefined;
+				emit({
+					phase: "downloading",
+					currentVersion: update.currentVersion,
+					availableVersion: update.version,
+					notes: update.body,
+					downloadedBytes,
+				});
+				await update.download(onDownload);
+			}
 			emit({
 				phase: "installing",
 				currentVersion: update.currentVersion,

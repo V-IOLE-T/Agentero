@@ -220,6 +220,33 @@ jobs:
           uploadUpdaterSignatures: true
           updaterJsonPreferNsis: true
 
+  updater-manifest:
+    name: Add updater direct-download fallbacks
+    needs: installers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Verify updater fallback generation
+        run: node --test scripts/updater-fallback-manifest.test.mjs
+      - name: Enrich draft updater manifest
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { addUpdaterFallbacks } = await import(`${process.env.GITHUB_WORKSPACE}/scripts/updater-fallback-manifest.mjs`);
+            const repo = context.repo;
+            const { data: release } = await github.rest.repos.getReleaseByTag({ ...repo, tag: context.ref.replace('refs/tags/', '') });
+            if (!release.draft) throw new Error('Refusing to modify a published release');
+            const assets = await github.paginate(github.rest.repos.listReleaseAssets, { ...repo, release_id: release.id, per_page: 100 });
+            const manifestAsset = assets.find(asset => asset.name === 'latest.json');
+            if (!manifestAsset) throw new Error('Missing latest.json');
+            const { data } = await github.rest.repos.getReleaseAsset({ ...repo, asset_id: manifestAsset.id, headers: { accept: 'application/octet-stream' } });
+            const manifest = addUpdaterFallbacks(JSON.parse(Buffer.from(data).toString('utf8')), assets);
+            await github.rest.repos.deleteReleaseAsset({ ...repo, asset_id: manifestAsset.id });
+            await github.rest.repos.uploadReleaseAsset({ ...repo, release_id: release.id, name: 'latest.json', data: JSON.stringify(manifest, null, 2) });
+
   # Android ships its own signed APK into the same draft. Kept out of the
   # `installers` matrix because it needs the Android SDK/NDK and a keystore
   # instead of per-OS desktop toolchains. The matrix is the ABI list: add

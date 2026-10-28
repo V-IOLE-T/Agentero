@@ -163,6 +163,8 @@ pub fn attach_handlers(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<ta
     {
         builder.invoke_handler(common_commands![
             #[cfg(not(any(target_os = "ios", target_os = "android")))]
+            crate::features::system::updater::updater_download_fallback,
+            #[cfg(not(any(target_os = "ios", target_os = "android")))]
             crate::integration::plugins::plugin_editor_state,
             #[cfg(not(any(target_os = "ios", target_os = "android")))]
             crate::integration::plugins::plugin_list,

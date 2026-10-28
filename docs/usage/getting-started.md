@@ -119,6 +119,8 @@ ResearchVault/
 2. 检查 **Settings → General → Network proxy** 的代理配置是否正确。
 3. 若仍失败，可直接到 [发布页](https://github.com/poco-ai/agentero/releases) 手动下载最新安装包。
 
+日志若显示 `Download request failed with status: 403 Forbidden`，可能是共享代理出口的 GitHub 匿名 API 额度耗尽。支持自动回退的新版客户端会优先从 API 下载，失败后按发布清单的文件直链重试一次，仍校验原始签名。0.13.0 等旧客户端没有此能力，遇到此问题可先从发布页手动下载安装包。
+
 ## 下一步
 
 - [导入和管理论文](import-papers.md)

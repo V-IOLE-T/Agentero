@@ -23,6 +23,7 @@ use std::path::Path;
 pub(crate) fn export_typescript_bindings() {
     let builder = tauri_specta::Builder::<tauri::Wry>::new()
         .commands(tauri_specta::collect_commands![
+            crate::features::system::updater::updater_download_fallback,
             crate::features::system::settings::commands::settings_get,
             crate::features::system::settings::commands::settings_set,
             crate::features::system::settings::commands::network_system_proxy,

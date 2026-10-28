@@ -14,7 +14,7 @@
 2. 执行 `/commit`，将版本 bump 作为独立的 `chore(release): bump version to <version>` commit。
 3. 确认 tag `v<version>` 指向该版本 bump commit，且 tag 去掉 `v` 后与所有版本字段一致。
 4. 推送 tag，`.github/workflows/release.yml` 先复用 `ci.yml` 验证该 tag 对应的提交；所有检查通过后才创建 Draft Release 并构建 Tauri installers 和 CLI artifacts。验证失败时先修复并重新按版本流程发布，不会创建新的 Draft 或启动安装包构建。构建前确认 repository secret 已配齐：updater 签名（见下）与内置 provider 的 `AGENTERO_BUILTIN_API_KEY`（见 §内置 Provider 构建期注入）。
-5. 在 Draft Release 中确认桌面安装包、应用内版本、CLI `--version` 和 CLI 文件名没有混用不同版本；确认 `latest.json` 与 updater `.sig` 资产齐全后才发布 Release。发布动作即触发 AtomGit 同步（见下节）。
+5. 等待 `Add updater direct-download fallbacks` job 成功；在 Draft Release 中确认桌面安装包、应用内版本、CLI `--version` 和 CLI 文件名没有混用不同版本；确认 `latest.json` 与 updater `.sig` 资产齐全，且所有平台均含 API `url` 和文件直链 `fallback_url` 后才发布 Release。发布动作即触发 AtomGit 同步（见下节）。
 
 `/bump` 和 `/commit` 默认只修改工作区或创建本地 commit，不会自动创建 tag、push 或发布 Release。
 
@@ -101,6 +101,9 @@ GitHub Actions 必须配置以下 repository secrets；`release.yml` 会在创�
 - Draft Release 用于验收，发布前不会被客户端读取；
 - 只有完整、已发布的稳定版 Release 才会成为更新源；
 - Windows metadata 优先采用 NSIS updater 包；macOS 与 Linux 使用 Tauri 生成的对应更新产物；
+- 所有桌面构建完成后，`updater-manifest` job 按 Release 资产映射，为每个平台增加 `fallback_url`（对应资产的 `browser_download_url`），保留原 API `url`、平台键与签名；缺少资产或签名则失败，禁止发布；
+- 客户端优先用 API 下载；下载或校验失败时，使用同一原生 updater 资源的副本，以同仓库文件直链重试一次。原版本、平台、签名、代理及安装上下文不变；进度从零重新计数。安装失败不触发下载回退；两次下载均失败才显示现有错误；
+- 此自动回退需要新版客户端和带 `fallback_url` 的发布清单。0.13.0 客户端忽略新增字段，无法自动获得回退能力；遇到 API 限流时仍需手动下载安装包。旧清单没有回退地址时保持原有错误处理；
 - 上述签名只证明更新包完整性，macOS 的 Developer ID 签名和 notarization 仍必须照常完成。
 
 生成或轮换密钥时，在安全位置执行以下命令，将公钥替换到 `tauri.conf.json`，并将私钥/密码写入 GitHub Actions Secrets：
