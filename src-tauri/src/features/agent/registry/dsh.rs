@@ -52,7 +52,7 @@ fn npm_entry(command: &Path) -> Result<Option<PathBuf>, String> {
     if relative
         .components()
         .any(|part| !matches!(part, Component::Normal(_)))
-        || !relative.extension().is_some_and(|ext| ext == "js")
+        || relative.extension().is_none_or(|ext| ext != "js")
     {
         return Err(invalid());
     }

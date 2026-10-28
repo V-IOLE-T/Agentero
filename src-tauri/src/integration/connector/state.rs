@@ -1137,15 +1137,13 @@ impl ConnectorController {
                         }
                     });
                 }
-            } else {
-                if let Some(app) = self.app_handle() {
-                    crate::features::jobs::spawn_parse_body_after_assets(
-                        Some(&app),
-                        std::path::Path::new(&vault),
-                        &payload.path,
-                        false,
-                    );
-                }
+            } else if let Some(app) = self.app_handle() {
+                crate::features::jobs::spawn_parse_body_after_assets(
+                    Some(&app),
+                    std::path::Path::new(&vault),
+                    &payload.path,
+                    false,
+                );
             }
         }
         if let Ok(g) = self.inner.lock() {

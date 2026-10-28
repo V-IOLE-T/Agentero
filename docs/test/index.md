@@ -59,6 +59,8 @@ Demo 完整包内容（`--empty` 除外）：
 
 提交前的 lint-staged 对暂存的 TypeScript、JavaScript（含 `.mjs` / `.cjs`）等文件运行 `biome check --write`，统一检查格式、lint 与 import 顺序。`pnpm format:ts` 仅格式化，不能代替完整检查。
 
+暂存 Rust 文件时，lint-staged 运行 `cargo fmt --all` 和 `cargo clippy --workspace --all-targets -- -D warnings`，与 CI 的严格 Clippy 要求一致。逻辑等价的样式警告直接修正表达式或控制流，不通过 `allow` 或跳过提交钩子作为通过依据。本地预检结果应注明操作系统；Windows 专属代码的警告在 macOS CI 中可能不会出现。
+
 CI 的 TypeScript quality 任务分别显示发布同步测试、ACP adapter staging、Biome、类型检查和依赖边界检查；测试分片独立运行。Release 复用同一 CI 工作流检查 tag 对应的提交，全部通过后才创建 Draft Release 和构建产物。CI 使用只读仓库权限，并按调用工作流与 ref 隔离 concurrency，避免普通 CI 与 Release 的验证互相取消。
 
 当前桌面 Rust 检查在 macOS 运行；Windows / Linux 桌面完整编译仍由 Release 构建覆盖，尚未加入日常 CI。
